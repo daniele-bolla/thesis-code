@@ -109,10 +109,10 @@ lemma rat_den_pos (den : ℕ) (h_den_nz : den ≠ 0) : 0 < den :=
   Nat.pos_of_ne_zero h_den_nz
 -- Helper: non-negative numerator from non-negative rational
 -- here i am using @Algebra/Order/Field/Basic.lean div_neg_of_neg_of_pos
-lemma num_nonneg_of_div_nonneg {num : ℤ} {den : ℕ} (hden : 0 < den)
+lemma rat_num_nonneg {num : ℤ} {den : ℕ} (hden : 0 < den)
     (h : 0 ≤ (num : ℚ) / den) : 0 ≤ num := by
-    -- probably this part help with the coercion with the all expression (num : ℚ)
-    -- how should i handle it?
+    -- probably this (num : ℚ) helps with the coercion with the all expression
+    -- in to rationals numbers, how should i handle it better?
   contrapose! h
   exact div_neg_of_neg_of_pos (by norm_cast) (by norm_cast : (0 : ℚ) < ↑den)
 -- Helper: addition formula for rationals
@@ -138,8 +138,8 @@ lemma rat_add_nonneg (a b : Rat) : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
   -- rcases b with ⟨ b_num, b_den, b_den_nz, b_cop ⟩
   have ha_den_pos := rat_den_pos a_den a_den_nz
   have hb_den_pos := rat_den_pos b_den b_den_nz
-  have ha_num_nonneg := num_nonneg_of_div_nonneg ha_den_pos ha
-  have hb_num_nonneg := num_nonneg_of_div_nonneg hb_den_pos hb
+  have ha_num_nonneg := rat_num_nonneg ha_den_pos ha
+  have hb_num_nonneg := rat_num_nonneg hb_den_pos hb
 
   rw [rat_add_formula a_den_nz b_den_nz]
   positivity -- would it be ok top use this?
