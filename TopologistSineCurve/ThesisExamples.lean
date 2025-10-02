@@ -6,7 +6,6 @@ theorem le_trans_proof : Transitive (· ≤ · : Nat → Nat → Prop) :=
 theorem nat_le_trans {n m k : Nat} : LE.le n m → LE.le m k → LE.le n k
   | h,  Nat.le.refl    => h
   | h₁, Nat.le.step h₂ => Nat.le.step (Nat.le_trans h₁ h₂)
-
 theorem rational_le_trans : Transitive (· ≤ · : Rat → Rat → Prop) := by
   intro a b c hab hbc
   exact Rat.le_trans hab hbc
@@ -21,6 +20,7 @@ def third : Rat := Rat.mk' 1 3
 #check half + third -- outputs : Rat
 
 variable (a b c : Rat)
+-- Old code:
 -- open Rat
 -- lemma add_nonneg_simplified : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
 --   intro ha hb
@@ -39,9 +39,12 @@ variable (a b c : Rat)
 --       exact Nat.mul_pos (Nat.pos_of_ne_zero a.den_nz) (Nat.pos_of_ne_zero b.den_nz)
 --   · norm_cast; exact a.den_nz
 --   norm_cast; exact b.den_nz
+-- End old code
 
+-- Proving add_nonneg by reconstructing some Rat theorems needed and
+-- the addition definition
 
-
+-- this is probably used to ensure the addition formula is well defined
 -- theorem rat_divInt_eq_iff (n₁ n₂ :Int)(d₁ d₂ :Nat)(z₁ : d₁ ≠ 0) (z₂ : d₂ ≠ 0) :
 --     n₁ /. d₁ = n₂ /. d₂ ↔ n₁ * d₂ = n₂ * d₁ := by
 --   sorry
@@ -52,48 +55,27 @@ variable (a b c : Rat)
 -- lemma rat_num_nonneg (q : Rat) : 0 ≤ q.num ↔ 0 ≤ q := by
 --   cases q with | div q_num q_den q_den_nz q_num_cop_den =>
 --     constructor
-
---     -- Forward direction: 0 ≤ q_num → 0 ≤ Rat.div q_num q_den ...
 --     · intro h_num_nonneg
---       -- Need to show: 0 ≤ Rat.div q_num q_den q_den_nz q_num_cop_den
---       -- This means: 0 ≤ (q_num / q_den)
---       -- By definition, ↑q_num / ↑q_den ≥ 0 when q_num ≥ 0 and q_den > 0
 --       sorry
-
---     -- Backward direction: 0 ≤ Rat.div q_num q_den ... → 0 ≤ q_num
 --     · intro h_rat_nonneg
---       by_contra hn  -- Assume ¬(0 ≤ q_num), i.e., q_num < 0
---       push_neg at hn  -- This gives: q_num < 0
---       -- Now we have:
---       -- h_rat_nonneg : 0 ≤ Rat.div q_num q_den q_den_nz q_num_cop_den
---       -- hn : q_num < 0
---       -- Since q_den > 0 (from q_den_nz and Nat properties)
---       -- we have q_num / q_den < 0, contradicting h_rat_nonneg
+--       by_contra hn
+--       push_neg at hn
 --       have h_den_pos : 0 < q_den := by
---         -- q_den is a Nat and q_den ≠ 0, so q_den > 0
---         omega  -- or cases on q_den
 --       sorry
--- lemma rat_add_num (a b : Rat) :  a + b = (a.num * ↑b.den + b.num * ↑a.den) / (↑a.den * ↑b.den) := by
+-- lemma rat_add_num (a b : Rat) :  a + b =
+--  (a.num * ↑b.den + b.num * ↑a.den) / (↑a.den * ↑b.den) := by
 --   cases b with | div b_num b_den b_den_nz b_num_cop_den =>
 --   cases a with | div a_num a_den a_den_nz a_num_cop_den =>
 --   sorry
 
 -- def rat_add (a b : Rat) : Rat := (a.num * b.den + b.num * a.den) / (a.den * b.den)
--- def rat_add_s (a_num b_num : Int) (a_den b_den : Nat): Rat :=
---   (a_num * ↑b_den + b_num * ↑a_den) / (↑a_den * ↑b_den)
 
 -- lemma add_nonneg_simp : 0 ≤ a → 0 ≤ b → 0 ≤  rat_add a b := by
 --   intro ha hb
-
 --   cases b with | div b_num b_den b_den_nz b_num_cop_den =>
 --   cases a with | div a_num a_den a_den_nz a_num_cop_den =>
-
 --   unfold rat_add
-
-
-
 --   have h_a_den_pos : 0 < a_den := sorry
-
 --   have h_b_den_pos : 0 < b_den := sorry
 --   rw[rat_divInt_nonneg_iff_of_pos_right]
 
@@ -117,6 +99,8 @@ variable (a b c : Rat)
 --     · norm_cast;
 -- #check @Rat.add
 -- #print Rat.add
+
+
 
 -- Porving Rat.add_nonneg withouth using any lemmas or theorems from Rat
 -- I am anyway using @Algebra/Order/Field/Basic.lean and tactics like positivity or ring
@@ -171,109 +155,8 @@ lemma rat_add_nonneg (a b : Rat) : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
 
   -- exact div_nonneg h_num_nonneg (le_of_lt h_den_pos)
 
--- lemma rat_den_pos (den : ℕ) (h_den_nz : den ≠ 0) : 0 < den   :=
---   Nat.pos_of_ne_zero h_den_nz
 
--- lemma num_nonneg_of_div_den_pos {num : ℤ} {den : ℕ} (hden : 0 < den)
---     (h : 0 ≤ (num : ℚ) / den) : 0 ≤ num := by
---   contrapose! h
---   exact div_neg_of_neg_of_pos (by norm_cast) (by norm_cast : (0 : ℚ) < ↑den)
---   -- by_contra hn; push_neg at hn
---   -- have : (num : ℚ) / den < 0 :=
---   --   div_neg_of_neg_of_pos (by norm_cast) (by norm_cast : (0 : ℚ) < den)
---   -- linarith
--- lemma rat_add_formula {a c : ℤ} {b d : ℕ} (hb : b ≠ 0) (hd : d ≠ 0) :
---     ((a :ℚ) / ↑b + c / ↑d) = (a * ↑d + c * ↑b) / (↑b * ↑d) := by
---   field_simp
-
--- lemma rat_add_nonneg (a b : Rat) : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
---   intro ha hb
---   cases a with | div a_num a_den a_den_nz a_cop =>
---   cases b with | div b_num b_den b_den_nz b_cop =>
---   -- when i deconstruct a and b in this way the goal becomes:
---   -- ⊢ 0 ≤ ↑a_num / ↑a_den + ↑b_num / ↑b_den
---   -- type coercions are foricng both num and den to be of type ℚ
---   -- i guess this is happening due to the operator / (HDiv.hDiv)?
---   -- is there a better approach? maybe using rcases?
---   -- rcases b with ⟨ b_num, b_den, b_den_nz, b_cop ⟩
---   have ha_den_pos : 0 < a_den := rat_den_pos a_den a_den_nz
---   have hb_den_pos : 0 < b_den := rat_den_pos b_den b_den_nz
-
---   have ha_num_nonneg : 0 ≤ a_num := num_nonneg_of_div_den_pos ha_den_pos ha
---   have hb_num_nonneg : 0 ≤ b_num := num_nonneg_of_div_den_pos hb_den_pos hb
-
---   -- I am using @/Algebra/Order/Field/Basic.lean -> div_add_div
---   -- am i allow to use it or i should rathere define my own div_add_div definition?
---   -- how should i implement if so?
---   -- i htink this would be like conastrucit the rational number or ust in part
---   have h_add_formula : (↑a_num : ℚ) / ↑a_den + ↑b_num / ↑b_den =
---                        (a_num * ↑b_den + b_num * ↑a_den) / (↑a_den * ↑b_den) := by
---     rw [div_add_div]
---     · ring
---     · norm_cast;
---     · norm_cast;
---     -- or i can just use field_simp (and explain what it does )
-
---   rw [h_add_formula]
---   -- Now goal is: 0 ≤ (a_num * ↑b_den + b_num * ↑a_den) / (↑a_den * ↑b_den)
---   -- and can be proved by positivity
---   positivity
-  -- have h_num_nonneg : (0 : ℚ) ≤ a_num * ↑b_den + b_num * ↑a_den := by
-  --   norm_cast
-  --   apply Int.add_nonneg
-  --   · apply Int.mul_nonneg ha_num_nonneg (Int.natCast_nonneg b_den)
-  --   · apply Int.mul_nonneg hb_num_nonneg (Int.natCast_nonneg a_den)
-
-  -- have h_den_pos : (0 : ℚ) < ↑a_den * ↑b_den := by
-  --   norm_cast
-  --   apply Nat.mul_pos ha_den_pos hb_den_pos
-
-  -- exact div_nonneg h_num_nonneg (le_of_lt h_den_pos)
-
--- lemma add_nonneg_simp : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
---   intro ha hb
---   cases b with | div b_num b_den b_den_nz b_num_cop_den =>
---   cases a with | div a_num a_den a_den_nz a_num_cop_den =>
-
---   have h_div_add_div: ↑a_num / ↑a_den + ↑b_num / ↑b_den =
---     rat_add_s a_num b_num a_den b_den := by
---       unfold rat_add_s
---       ring_nf
---       norm_num
---   rw[h_div_add_div]
-
---   have h_a_den_pos : 0 < a_den := Nat.pos_of_ne_zero a_den_nz
-
---   have h_b_den_pos : 0 < b_den := Nat.pos_of_ne_zero b_den_nz
-
---   rw[rat_divInt_nonneg_iff_of_pos_right]
-
---   have ha_num_nonneg : 0 ≤ a_num := by
---     have h_a_den_pos : (0: ℤ) < ↑a_den := Nat.cast_pos.mpr (Nat.pos_of_ne_zero a_den_nz)
---     rw [← rat_divInt_nonneg_iff_of_pos_right h_a_den_pos]
---     norm_cast at ha
---     exact ha
-
---   have hb_num_nonneg : 0 ≤ b_num := by
---     have h_b_den_pos : (0: ℤ) < ↑b_den := Nat.cast_pos.mpr (Nat.pos_of_ne_zero b_den_nz)
---     rw [← rat_divInt_nonneg_iff_of_pos_right h_b_den_pos]
---     norm_cast at hb
---     exact hb
-
---   · refine Int.add_nonneg ?_ ?_
---     · refine Int.mul_nonneg ha_num_nonneg  ?_
---       exact Int.natCast_nonneg b_den
---     · refine Int.mul_nonneg hb_num_nonneg  ?_
---       exact Int.natCast_nonneg a_den
-
---   · refine Int.mul_pos ?_ ?_
---     · norm_cast
---       exact h_a_den_pos
---     · norm_cast
---       exact h_b_den_pos
-
-
-
+-- Type classes section
 
 -- -- A semigroup has an associative binary operation
 -- class SemigroupD (α : Type*) where
