@@ -120,6 +120,7 @@ lemma rat_num_nonneg {num : ℤ} {den : ℕ} (hden : 0 < den)
 
 lemma rat_add_formula {a c : ℤ} {b d : ℕ} (hb : b ≠ 0) (hd : d ≠ 0) :
     (a : ℚ) / ↑b + c / ↑d = (a * ↑d + c * ↑b) / (↑b * ↑d) := by
+     -- same issue as in line 113 (a : ℚ)
     rw [div_add_div]
     · ring
     · norm_cast;
