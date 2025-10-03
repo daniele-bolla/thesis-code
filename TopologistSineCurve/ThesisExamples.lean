@@ -41,143 +41,83 @@ variable (a b c : Rat)
 --   norm_cast; exact b.den_nz
 -- End old code
 
--- Proving add_nonneg by reconstructing some Rat theorems needed and
--- the addition definition
-
--- this is probably used to ensure the addition formula is well defined
--- theorem rat_divInt_eq_iff (n₁ n₂ :Int)(d₁ d₂ :Nat)(z₁ : d₁ ≠ 0) (z₂ : d₂ ≠ 0) :
---     n₁ /. d₁ = n₂ /. d₂ ↔ n₁ * d₂ = n₂ * d₁ := by
---   sorry
--- lemma rat_divInt_nonneg_iff_of_pos_right {a b : ℤ} (hb : 0 < b) :
---   0 ≤ a / b ↔ 0 ≤ a := b
---       sorry
--- theorem rat_den_pos (q : Rat) : 0 < q.den := Nat.pos_of_ne_zero q.den_nz
--- lemma rat_num_nonneg (q : Rat) : 0 ≤ q.num ↔ 0 ≤ q := by
---   cases q with | div q_num q_den q_den_nz q_num_cop_den =>
---     constructor
---     · intro h_num_nonneg
---       sorry
---     · intro h_rat_nonneg
---       by_contra hn
---       push_neg at hn
---       have h_den_pos : 0 < q_den := by
---       sorry
--- lemma rat_add_num (a b : Rat) :  a + b =
---  (a.num * ↑b.den + b.num * ↑a.den) / (↑a.den * ↑b.den) := by
---   cases b with | div b_num b_den b_den_nz b_num_cop_den =>
---   cases a with | div a_num a_den a_den_nz a_num_cop_den =>
---   sorry
-
--- def rat_add (a b : Rat) : Rat := (a.num * b.den + b.num * a.den) / (a.den * b.den)
-
--- lemma add_nonneg_simp : 0 ≤ a → 0 ≤ b → 0 ≤  rat_add a b := by
---   intro ha hb
---   cases b with | div b_num b_den b_den_nz b_num_cop_den =>
---   cases a with | div a_num a_den a_den_nz a_num_cop_den =>
---   unfold rat_add
---   have h_a_den_pos : 0 < a_den := sorry
---   have h_b_den_pos : 0 < b_den := sorry
---   rw[rat_divInt_nonneg_iff_of_pos_right]
-
---   have ha_num_nonneg : 0 ≤ a_num := by
---     have h_a_den_pos : (0: ℤ) < ↑a_den := Nat.cast_pos.mpr (Nat.pos_of_ne_zero a_den_nz)
---     rw [← rat_divInt_nonneg_iff_of_pos_right h_a_den_pos]
---     norm_cast at ha;
-
---   have hb_num_nonneg : 0 ≤ b_num := by
---     have h_b_den_pos : (0: ℤ) < ↑b_den := Nat.cast_pos.mpr (Nat.pos_of_ne_zero b_den_nz)
---     rw [← rat_divInt_nonneg_iff_of_pos_right h_b_den_pos]
---     norm_cast at hb;
-
---   · refine Int.add_nonneg ?_ ?_
---     · refine Int.mul_nonneg ha_num_nonneg  ?_
---       · exact Int.natCast_nonneg b_den
---     · refine Int.mul_nonneg hb_num_nonneg  ?_
---       · exact Int.natCast_nonneg a_den
---   · refine Int.mul_pos ?_ ?_
---     · norm_cast;
---     · norm_cast;
 -- #check @Rat.add
 -- #print Rat.add
 
-
-
--- Porving Rat.add_nonneg withouth using any lemmas or theorems from Rat
--- I am anyway using @Algebra/Order/Field/Basic.lean and tactics like positivity or ring
+-- Proving Rat.add_nonneg withouth using any lemmas or theorems from Rat
 -- Helper: positive denominators
-lemma rat_den_pos (den : ℕ) (h_den_nz : den ≠ 0) : 0 < den :=
+lemma nat_ne_zero_pos (den : ℕ) (h_den_nz : den ≠ 0) : 0 < den :=
   Nat.pos_of_ne_zero h_den_nz
 -- Helper: non-negative numerator from non-negative rational
--- here i am using @Algebra/Order/Field/Basic.lean div_neg_of_neg_of_pos
-lemma rat_num_nonneg {num : ℤ} {den : ℕ} (hden : 0 < den)
-    (h : 0 ≤ (num : ℚ) / den) : 0 ≤ num := by
-    -- probably this (num : ℚ) helps with the coercion with the all expression
-    -- in to rationals numbers, how should i handle it better?
+lemma rat_num_nonneg {num : ℤ} {den : ℕ} (hden_pos : 0 < den)
+    (h : (0 : ℚ) ≤ num / den) : 0  ≤ num := by
   contrapose! h
-  exact div_neg_of_neg_of_pos (by norm_cast) (by norm_cast : (0 : ℚ) < ↑den)
--- Helper: addition formula for rationals
--- here i am using @Algebra/Order/Field/Basic.lean div_add_div
+  have hden_pos_to_rat : (0 : ℚ) < den := Nat.cast_pos.mpr hden_pos
+  have hnum_neg_to_rat : num  < (0 : ℚ)  := Int.cast_lt.mpr h
+  exact div_neg_of_neg_of_pos hnum_neg_to_rat hden_pos_to_rat
 
-lemma rat_add_formula {a c : ℤ} {b d : ℕ} (hb : b ≠ 0) (hd : d ≠ 0) :
-    (a : ℚ) / ↑b + c / ↑d = (a * ↑d + c * ↑b) / (↑b * ↑d) := by
-     -- same issue as in line 113 (a : ℚ)
-    rw [div_add_div]
-    · ring
-    · norm_cast;
-    · norm_cast;
-    -- or i can just use field_simp (and explain what it does )
 -- Main theorem: addition preserves non-negativity
 lemma rat_add_nonneg (a b : Rat) : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
+  -- Context: a b : ℚ
+  -- Goal: ⊢ 0 ≤ a → 0 ≤ b → 0 ≤ a + b
   intro ha hb
+  -- Adds (ha : 0 ≤ a) in the context and similarly hb
+  -- as seen temrs of type Rat are strucuters. Strucutre cna be deconstructured
+  -- in terms of their field (adding them to the context) as following
   cases a with | div a_num a_den a_den_nz a_cop =>
   cases b with | div b_num b_den b_den_nz b_cop =>
-  -- when i deconstruct a and b in this way the goal becomes:
-  -- ⊢ 0 ≤ ↑a_num / ↑a_den + ↑b_num / ↑b_den
-  -- type coercions are foricng both num and den to be of type ℚ
-  -- i guess this is happening due to the operator "/" (HDiv.hDiv)?
-  -- is there a better approach? maybe using rcases?
-  -- rcases b with ⟨ b_num, b_den, b_den_nz, b_cop ⟩
-  have ha_den_pos := rat_den_pos a_den a_den_nz
-  have hb_den_pos := rat_den_pos b_den b_den_nz
-  have ha_num_nonneg := rat_num_nonneg ha_den_pos ha
-  have hb_num_nonneg := rat_num_nonneg hb_den_pos hb
+  -- Goal: ⊢ 0 ≤ ↑a_num / ↑a_den + ↑b_num / ↑b_den
+  rw[div_add_div]
+  -- this theorem (a c : K) (hb : b ≠ 0) (hd : d ≠ 0) : a / b + c / d
+  -- = (a * d + b * c) / (b * d) applies the addition formula for rationals
+  -- and requires (hb : b ≠ 0) (hd : d ≠ 0) adding two new goals
+  -- we split each goal by using · (enterd by ·)
+  · -- Goal: ⊢ 0 ≤ (↑a_num * ↑b_den + ↑a_den * ↑b_num) / (↑a_den * ↑b_den)
+    have ha_num_nonneg := by
+      have ha_den_pos := nat_ne_zero_pos a_den a_den_nz
+      exact rat_num_nonneg ha_den_pos ha
+    have hb_num_nonneg := by
+      have hb_den_pos := nat_ne_zero_pos b_den b_den_nz
+      exact rat_num_nonneg hb_den_pos hb
+    have hnum_nonneg : (0 : ℚ) ≤ a_num * b_den + a_den * b_num := by
+      apply add_nonneg -- works for any OrderedAddCommMonoid
+      · apply mul_nonneg -- works for any OrderedSemiring
+        · exact Int.cast_nonneg.mpr ha_num_nonneg
+        · exact Nat.cast_nonneg b_den
+      · apply mul_nonneg
+        · exact Nat.cast_nonneg a_den
+        · exact Int.cast_nonneg.mpr hb_num_nonneg
 
-  rw [rat_add_formula a_den_nz b_den_nz]
-  positivity -- would it be ok top use this?
-  -- have h_num_nonneg : (0 : ℚ) ≤ a_num * ↑b_den + b_num * ↑a_den := by
-  --   norm_cast
-  --   apply Int.add_nonneg
-  --   · apply Int.mul_nonneg ha_num_nonneg (Int.natCast_nonneg b_den)
-  --   · apply Int.mul_nonneg hb_num_nonneg (Int.natCast_nonneg a_den)
+    have hden_nonneg : (0 : ℚ) ≤ a_den * b_den := by
+      rw [← Nat.cast_mul]
+      exact Nat.cast_nonneg (a_den * b_den)
+    exact div_nonneg hnum_nonneg hden_nonneg
 
-  -- have h_den_pos : (0 : ℚ) < ↑a_den * ↑b_den := by
-  --   norm_cast
-  --   apply Nat.mul_pos ha_den_pos hb_den_pos
-
-  -- exact div_nonneg h_num_nonneg (le_of_lt h_den_pos)
+  · exact Nat.cast_ne_zero.mpr a_den_nz -- Goal ⊢ ↑a_den ≠ 0
+  · exact Nat.cast_ne_zero.mpr b_den_nz -- Goal ⊢ ↑b_den ≠ 0
 
 
 -- Type classes section
 
--- -- A semigroup has an associative binary operation
--- class SemigroupD (α : Type*) where
---   mul : α → α → α
---   mul_assoc : ∀ a b c : α, mul (mul a b) c = mul a (mul b c)
--- -- A monoid extends semigroup with an identity element
--- class MonoidD (α : Type*) extends Semigroup α where
---   one : α
---   one_mul : ∀ a : α, mul one a = a
---   mul_one : ∀ a : α, mul a one = a
--- -- A group extends monoid with inverses
--- class GroupD (α : Type*) extends Monoid α where
---   inv : α → α
---   mul_left_inv : ∀ a : α, mul (inv a) a = one
+-- A semigroup has an associative binary operation
+class SemigroupD (α : Type*) where
+  mul : α → α → α
+  mul_assoc : ∀ a b c : α, mul (mul a b) c = mul a (mul b c)
+-- A monoid extends semigroup with an identity element
+class MonoidD (α : Type*) extends Semigroup α where
+  one : α
+  one_mul : ∀ a : α, mul one a = a
+  mul_one : ∀ a : α, mul a one = a
+-- A group extends monoid with inverses
+class GroupD (α : Type*) extends Monoid α where
+  inv : α → α
+  mul_left_inv : ∀ a : α, mul (inv a) a = one
 
--- instance RatAddGroup : GroupD Rat where
---   mul := (· + ·)
---   mul_assoc := by intros; apply add_assoc
---   one := 0
---   one_mul := by intros; apply zero_add
---   mul_one := by intros; apply add_zero
---   inv := (· * -1)
---   mul_left_inv := by intros; ring
+instance RatAddGroup : GroupD Rat where
+  mul := (· + ·)
+  mul_assoc := by intros; apply add_assoc
+  one := 0
+  one_mul := by intros; apply zero_add
+  mul_one := by intros; apply add_zero
+  inv := (· * -1)
+  mul_left_inv := by intros; ring
