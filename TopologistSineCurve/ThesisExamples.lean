@@ -76,7 +76,7 @@ lemma rat_add_nonneg (a b : Rat) : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
   -- Adds (ha : 0 ≤ a) in the context and similarly hb
   -- as seen temrs of type Rat are strucuters.
   -- Strucutre cna be deconstructured
-  -- in terms of their field (adding them to the context) as following
+
   cases a with | div a_num a_den a_den_nz a_cop =>
   cases b with | div b_num b_den b_den_nz b_cop =>
   -- Goal: ⊢ 0 ≤ ↑a_num / ↑a_den + ↑b_num / ↑b_den
@@ -86,13 +86,14 @@ lemma rat_add_nonneg (a b : Rat) : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
   -- and requires (hb : b ≠ 0) (hd : d ≠ 0) adding two new goals
   -- we split each goal by using · (enterd by ·)
   · -- Goal: ⊢ 0 ≤ (↑a_num * ↑b_den + ↑a_den * ↑b_num) / (↑a_den * ↑b_den)
+
+    have ha_num_nonneg := by
+      have ha_den_pos := nat_ne_zero_pos a_den a_den_nz
+      exact rat_num_nonneg ha_den_pos ha
+    have hb_num_nonneg := by
+      have hb_den_pos := nat_ne_zero_pos b_den b_den_nz
+      exact rat_num_nonneg hb_den_pos hb
     have hnum_nonneg : (0 : ℚ) ≤ a_num * b_den + a_den * b_num := by
-      have ha_num_nonneg := by
-        have ha_den_pos := nat_ne_zero_pos a_den a_den_nz
-        exact rat_num_nonneg ha_den_pos ha
-      have hb_num_nonneg := by
-        have hb_den_pos := nat_ne_zero_pos b_den b_den_nz
-        exact rat_num_nonneg hb_den_pos hb
       apply add_nonneg -- works for any OrderedAddCommMonoid
       · apply mul_nonneg -- works for any OrderedSemiring
         · exact Int.cast_nonneg.mpr ha_num_nonneg
@@ -117,7 +118,8 @@ class SemigroupD (α : Type*) where
   mul : α → α → α
   mul_assoc : ∀ a b c : α, mul (mul a b) c = mul a (mul b c)
 -- A monoid extends semigroup with an identity element
-class MonoidD (α : Type*) extends Semigroup  α where
+
+class MonoidD (α : Type*) extends Semigroup α where
   one : α
   one_mul : ∀ a : α, mul one a = a
   mul_one : ∀ a : α, mul a one = a
