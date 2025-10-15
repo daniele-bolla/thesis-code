@@ -60,6 +60,8 @@ variable (a b c : Rat)
 lemma nat_ne_zero_pos (den : ℕ) (h_den_nz : den ≠ 0) : 0 < den :=
   Nat.pos_of_ne_zero h_den_nz
 -- Helper: non-negative numerator from non-negative rational
+
+set_option trace.Tactic.norm_cast true
 lemma rat_num_nonneg {num : ℤ} {den : ℕ} (hden_pos : 0 < den)
     (h : (0 : ℚ) ≤ num / den) : 0  ≤ num := by
   contrapose! h
@@ -69,9 +71,6 @@ lemma rat_num_nonneg {num : ℤ} {den : ℕ} (hden_pos : 0 < den)
 
 -- Main theorem: addition preserves non-negativity
 lemma rat_add_nonneg (a b : Rat) : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
-
-  -- Context: a b : ℚ
-  -- Goal: ⊢ 0 ≤ a → 0 ≤ b → 0 ≤ a + b
   intro ha hb
   -- Adds (ha : 0 ≤ a) in the context and similarly hb
   -- as seen temrs of type Rat are strucuters.
@@ -81,35 +80,31 @@ lemma rat_add_nonneg (a b : Rat) : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
   cases b with | div b_num b_den b_den_nz b_cop =>
   -- Goal: ⊢ 0 ≤ ↑a_num / ↑a_den + ↑b_num / ↑b_den
   rw[div_add_div]
-  -- this theorem (a c : K) (hb : b ≠ 0) (hd : d ≠ 0) : a / b + c / d
-  -- = (a * d + b * c) / (b * d) applies the addition formula for rationals
-  -- and requires (hb : b ≠ 0) (hd : d ≠ 0) adding two new goals
-  -- we split each goal by using · (enterd by ·)
-  · -- Goal: ⊢ 0 ≤ (↑a_num * ↑b_den + ↑a_den * ↑b_num) / (↑a_den * ↑b_den)
-
-    have ha_num_nonneg := by
+  -- Goal: ⊢ 0 ≤ (↑a_num * ↑b_den + ↑a_den * ↑b_num) / (↑a_den * ↑b_den)
+  · have ha_num_nonneg := by
       have ha_den_pos := nat_ne_zero_pos a_den a_den_nz
       exact rat_num_nonneg ha_den_pos ha
     have hb_num_nonneg := by
       have hb_den_pos := nat_ne_zero_pos b_den b_den_nz
       exact rat_num_nonneg hb_den_pos hb
     have hnum_nonneg : (0 : ℚ) ≤ a_num * b_den + a_den * b_num := by
-      apply add_nonneg -- works for any OrderedAddCommMonoid
-      · apply mul_nonneg -- works for any OrderedSemiring
-        · exact Int.cast_nonneg.mpr ha_num_nonneg
-        · exact Nat.cast_nonneg b_den
-      · apply mul_nonneg
-        · exact Nat.cast_nonneg a_den
-        · exact Int.cast_nonneg.mpr hb_num_nonneg
+      rw [← Int.cast_zero]
+      rw [← Int.cast_natCast b_den, ← Int.cast_natCast a_den]
+      rw [← Int.cast_mul, ← Int.cast_mul]
+      rw [← Int.cast_add]
+      rw [Int.cast_le]
 
+      apply Int.add_nonneg
+      · exact Int.mul_nonneg ha_num_nonneg (Int.natCast_nonneg _)
+      · exact Int.mul_nonneg  (Int.natCast_nonneg _) hb_num_nonneg
     have hden_nonneg : (0 : ℚ) ≤ a_den * b_den := by
       rw [← Nat.cast_mul]
       exact Nat.cast_nonneg (a_den * b_den)
+
     exact div_nonneg hnum_nonneg hden_nonneg
 
   · exact Nat.cast_ne_zero.mpr a_den_nz -- Goal ⊢ ↑a_den ≠ 0
   · exact Nat.cast_ne_zero.mpr b_den_nz -- Goal ⊢ ↑b_den ≠ 0
-
 
 -- Type classes section
 
@@ -137,5 +132,144 @@ instance RatAddGroup : GroupD Rat where
   inv := (· * -1)
   mul_left_inv := by intros; ring
 
-open Real Set
-def S : Set (ℝ × ℝ) := (fun x ↦ (x, sin x⁻¹)) '' Ioi 0
+
+open Real Set Filter Topology
+def pos_real := Ioi (0 : ℝ)
+noncomputable def sine_curve := fun x ↦ (x, sin (x⁻¹))
+
+def S : Set (ℝ × ℝ) := sine_curve '' pos_real
+def Z : Set (ℝ × ℝ) := { (0, 0) }
+def T : Set (ℝ × ℝ) := S ∪ Z
+
+-- lemma S_is_conn : IsConnected S := by
+--   apply isConnected_Ioi.image
+--   · sorry
+--   -- apply ContinuousOn.prodMk continuous_id.continuousOn
+--   -- apply Real.continuous_sin.comp_continuousOn
+--   -- exact continuousOn_inv₀.mono fun _ hx ↦ hx.ne'
+
+lemma sine_curve_is_continuous_on_pos_real_one_liner : ContinuousOn (fun x ↦ sin x⁻¹) (Ioi 0) :=
+ continuous_sin.comp_continuousOn <| continuousOn_inv₀.mono fun _ hx ↦ hx.ne'
+
+-- lemma S_is_conn : IsConnected S := by
+--   refine isConnected_Ioi.image _ <| continuousOn_id.prodMk ?_
+--   exact sine_curve_is_continuous_on_pos_real_one_liner
+
+-- lemma inv_is_continuous_on_pos_real : ContinuousOn (fun x : ℝ => x⁻¹) (pos_real) :=
+--  continuousOn_inv₀.mono fun _ hx ↦ hx.ne'
+
+-- lemma inv_is_continuous_on_pos_real : ContinuousOn (fun x : ℝ => x⁻¹) (pos_real) := by
+--   apply ContinuousOn.inv₀
+--   · exact continuous_id.continuousOn
+--   · intro x hx; exact ne_of_gt hx
+
+lemma inv_is_continuous_on_pos_real : ContinuousOn (fun x : ℝ => x⁻¹) (pos_real) :=
+    ContinuousOn.inv₀ (continuous_id.continuousOn) (fun _ hx =>  ne_of_gt hx)
+
+-- lemma sin_comp_inv_is_continuous_on_pos_real : ContinuousOn
+--  (sine_curve) (pos_real) := by
+--   apply ContinuousOn.prodMk continuous_id.continuousOn
+--   apply Real.continuous_sin.comp_continuousOn
+--   exact inv_is_continuous_on_pos_real
+lemma sin_comp_inv_is_continuous_on_pos_real : ContinuousOn
+ (sine_curve) (pos_real) :=
+ ContinuousOn.prodMk continuous_id.continuousOn <|
+  Real.continuous_sin.comp_continuousOn <| (inv_is_continuous_on_pos_real)
+
+-- lemma S_is_conn : IsConnected S := by
+--   apply isConnected_Ioi.image
+--   · exact sin_comp_inv_is_continuous_on_pos_real
+
+
+lemma S_is_conn : IsConnected S :=
+  isConnected_Ioi.image sine_curve <| continuous_id.continuousOn.prodMk <|
+    continuous_sin.comp_continuousOn <|
+    ContinuousOn.inv₀ continuous_id.continuousOn (fun _ hx => ne_of_gt hx)
+
+lemma T_sub_cls_S : T ⊆ closure S := by
+  intro x hx
+  cases hx with
+  | inl hxS => exact subset_closure hxS
+  | inr hxZ =>
+      rw [hxZ]
+      let f : ℕ → ℝ × ℝ := fun n => ((n * Real.pi)⁻¹, 0)
+      have hf : Tendsto f atTop (𝓝 (0, 0)) := by
+        refine .prodMk_nhds ?_ tendsto_const_nhds
+        exact tendsto_inv_atTop_zero.comp
+          (Filter.Tendsto.atTop_mul_const' Real.pi_pos tendsto_natCast_atTop_atTop)
+      have hf' : ∀ᶠ n in atTop, f n ∈ S := by
+        filter_upwards [eventually_gt_atTop 0] with n hn
+        exact ⟨(n * Real.pi)⁻¹,
+          inv_pos.mpr (mul_pos (Nat.cast_pos.mpr hn) Real.pi_pos),
+          by simp [f, sine_curve, inv_inv, Real.sin_nat_mul_pi]⟩
+      exact mem_closure_of_tendsto hf hf'
+
+lemma T_sub_cls_sS : T ⊆ closure S := by
+  intro x hx
+  cases hx with
+  | inl hxS => exact subset_closure hxS
+  | inr hxZ =>
+      refine mem_closure_iff_frequently.mpr ?_
+      sorry
+-- T is Connected
+-- lemma T_sub_cls_S : T ⊆ closure S := by
+--   intro x hx
+--   cases hx with
+--   | inl hxS => exact subset_closure hxS
+--   | inr hxZ =>
+--       rw [hxZ]
+--       let f :  ℕ →  ℝ × ℝ := fun n => ((n * Real.pi)⁻¹, 0)
+--       have hnMulpiAtTop : Tendsto (fun n : ℕ => n* Real.pi) atTop atTop := by
+--         apply Filter.Tendsto.atTop_mul_const'
+--         · exact Real.pi_pos
+--         · exact tendsto_natCast_atTop_atTop
+--       have hf : Tendsto f atTop (𝓝 (0, 0))  := by
+--         apply Filter.Tendsto.prodMk_nhds
+--         · exact tendsto_inv_atTop_zero.comp hnMulpiAtTop
+--         · exact tendsto_const_nhds
+--       have hf' : ∀ᶠ n in atTop, f n ∈ S := by
+--         have hfInS : ∀ n : ℕ, 0 < n → f n ∈ S := by
+--           intro n hn
+--           use (n * Real.pi)⁻¹
+--           constructor
+--           unfold pos_real
+--           rw [Set.mem_Ioi]
+--           · apply inv_pos.mpr
+--             apply mul_pos
+--             · exact Nat.cast_pos.mpr hn
+--             · exact Real.pi_pos
+--           · unfold f
+--             calc sine_curve (n * Real.pi)⁻¹ =
+--               ((n * Real.pi)⁻¹, Real.sin ((n * Real.pi)⁻¹)⁻¹) := by rfl
+--               _ = ((n * Real.pi)⁻¹, Real.sin (n * Real.pi)) := by
+--                   congr
+--                   simp only [inv_inv]
+--               _ = ((n * Real.pi)⁻¹,0) := by
+--                 congr
+--                 apply Real.sin_nat_mul_pi
+--         filter_upwards [eventually_gt_atTop 0] using hfInS
+--       apply mem_closure_of_tendsto hf hf'
+-- lemma S_is_conn : IsConnected S :=
+--   isConnected_Ioi.image sine_curve <| continuous_id.continuousOn.prodMk <|
+--     Real.continuous_sin.comp_continuousOn <|
+--     ContinuousOn.inv₀ continuous_id.continuousOn (fun _ hx => ne_of_gt hx)
+
+-- theorem T_is_onn : IsConnected T := IsConnected.subset_closure S_is_conn (by tauto_set) T_sub_cls_S
+-- theorem T_is_onn : IsConnected T := by
+--   apply IsConnected.subset_closure
+--   · exact S_is_conn
+--   · tauto_set
+--   · exact T_sub_cls_S
+
+theorem T_is_conn : IsConnected T := by
+  apply IsConnected.subset_closure
+  · exact S_is_conn -- ⊢ IsConnected ?s
+  · tauto_set -- ⊢ S ⊆ T
+  · exact T_sub_cls_S -- ⊢ T ⊆ closure S
+
+-- theorem T_isconn_not_path_conn : IsConnected T ∧ ¬IsPathConnected T := by
+--   constructor
+--   · exact T_is_conn
+--   · exact T_is_not_path_conn
+-- theorem T_isconn_not_path_conn : IsConnected T ∧ ¬IsPathConnected T :=
+--   ⟨T_is_conn,T_is_not_path_conn ⟩
