@@ -139,37 +139,35 @@ theorem T_is_not_path_conn : ¬ (IsPathConnected T)  := by
     have : dist (xs_pos_peak (max 1 N)) 0 < a / 2 := hN _ (le_max_right _ _)
     rw [Real.dist_eq, sub_zero, abs_of_nonneg (xs_pos_peak_nonneg _)] at this
     linarith
-
-  -- Now we can show that there exist time s₁ in [t₀, t₁] ⊆ [t₀, t₀ + δ) such that:
-  -- 1. p(s₁) = (*,1)
-  obtain ⟨s₁, hs₁, hpath_s₁⟩ : ∃ s₁ ∈ Set.Icc t₀ t₁, (p s₁).2 = 1 := by
+  -- Now we can show that there exist time t' in [t₀, t₁] ⊆ [t₀, t₀ + δ) such that p(t') = (*,1)
+  obtain ⟨t', ht', hpath_t'⟩ : ∃ t' ∈ Set.Icc t₀ t₁, (p t').2 = 1 := by
     obtain ⟨i, hige, hi⟩ := xpos_has_terms_in_Icc_of_a_b
     have : xs_pos_peak i ∈ xcoord_path '' Set.Icc t₀ t₁ := Icc_of_a_b_sub_Icc_t₀_t₁ hi
-    obtain ⟨s₁, hs₁_mem, hs₁_x⟩ := this
-    use s₁, hs₁_mem
-    -- Show p s₁ ∈ S (not in Z, since that would make xs_pos_peak i = 0)
-    have hin_S : p s₁ ∈ S := by
-      cases p_conn.somePath_mem s₁ with
+    obtain ⟨t', ht'_mem, ht'_x⟩ := this
+    use t', ht'_mem
+    -- Show p t' ∈ S (not in Z, since that would make xs_pos_peak i = 0)
+    have hin_S : p t' ∈ S := by
+      cases p_conn.somePath_mem t' with
       | inl hS => exact hS
       | inr hZ =>
-        have heq_zero : p s₁ = (0, 0) := Set.mem_singleton_iff.mp hZ
+        have heq_zero : p t' = (0, 0) := Set.mem_singleton_iff.mp hZ
         have : xs_pos_peak i = 0 := by
           calc xs_pos_peak i
-              = (p s₁).1 := by simpa [xcoord_path] using hs₁_x.symm
+              = (p t').1 := by simpa [xcoord_path] using ht'_x.symm
             _ = (0, 0).1 := by rw [heq_zero]
             _ = 0 := rfl
         simpa [this] using sin_xs_pos_peak_eq_one i
-    -- Since p s₁ ∈ S, we have p s₁ = (x, sin(1/x)) for some x > 0
+    -- Since p t' ∈ S, we have p t' = (x, sin(1/x)) for some x > 0
     obtain ⟨x, _, heq⟩ := hin_S
     -- But x = xs_pos_peak i (from the x-coordinate), so sin(1/x) = 1
     have hx : x = xs_pos_peak i := by
-      have : (p s₁).1 = x := by simpa [sine_curve] using congrArg Prod.fst heq.symm
-      calc x = (p s₁).1 := this.symm
-          _ = xcoord_path s₁ := rfl
-          _ = xs_pos_peak i := hs₁_x
+      have : (p t').1 = x := by simpa [sine_curve] using congrArg Prod.fst heq.symm
+      calc x = (p t').1 := this.symm
+          _ = xcoord_path t' := rfl
+          _ = xs_pos_peak i := ht'_x
     rw [← heq, sine_curve, hx]
     exact sin_xs_pos_peak_eq_one i
-  --Derive the final contradiction using s₁, hs₁, hpath_s₁
+  --Derive the final contradiction using t', ht', hpath_t'
   -- First show that p t₀ = (0, 0)
   have hpt₀ : p t₀ = (0, 0) := by
     cases p_conn.somePath_mem t₀ with
@@ -182,19 +180,19 @@ theorem T_is_not_path_conn : ¬ (IsPathConnected T)  := by
       simp [pos_real] at hx_pos
       linarith
     | inr hZ => exact Set.mem_singleton_iff.mp hZ
-  -- s₁ is within δ of t₀ (since s₁ ∈ [t₀, t₁] and dist t₀ t₁ < δ)
-  have s₁_close : dist s₁ t₀ < δ := by
-    calc dist s₁ t₀
-        ≤ dist t₁ t₀ := dist_right_le_of_mem_uIcc (Icc_subset_uIcc' hs₁)
+  -- t' is within δ of t₀ (since t' ∈ [t₀, t₁] and dist t₀ t₁ < δ)
+  have t'_close : dist t' t₀ < δ := by
+    calc dist t' t₀
+        ≤ dist t₁ t₀ := dist_right_le_of_mem_uIcc (Icc_subset_uIcc' ht')
       _ = dist t₀ t₁ := dist_comm _ _
       _ < δ := ht₁.2
-  -- By continuity, p(s₁) is close to p(t₀)
-  have close : dist (p s₁) (p t₀) < 1/2 := ht s₁ s₁_close
-  -- But p(s₁) has y-coordinate 1, so it's far from p(t₀) = (0,0)
-  have far : 1 ≤ dist (p s₁) (p t₀) := by
-    calc 1 = |(p s₁).2 - (p t₀).2| := by simp [hpath_s₁, hpt₀]
-        _ ≤ ‖p s₁ - p t₀‖ := norm_ge_abs_snd
-        _ = dist (p s₁) (p t₀) := by rw [dist_eq_norm]
+  -- By continuity, p(t') is close to p(t₀)
+  have close : dist (p t') (p t₀) < 1/2 := ht t' t'_close
+  -- But p(t') has y-coordinate 1, so it's far from p(t₀) = (0,0)
+  have far : 1 ≤ dist (p t') (p t₀) := by
+    calc 1 = |(p t').2 - (p t₀).2| := by simp [hpath_t', hpt₀]
+        _ ≤ ‖p t' - p t₀‖ := norm_ge_abs_snd
+        _ = dist (p t') (p t₀) := by rw [dist_eq_norm]
   linarith
 
 theorem T_is_conn_not_pathconn : IsConnected T ∧ ¬IsPathConnected T :=
