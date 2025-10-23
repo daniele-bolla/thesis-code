@@ -162,57 +162,32 @@ lemma rat_add_nonneg (a b : Rat) : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
   · exact Nat.cast_ne_zero.mpr b_den_nz -- Goal ⊢ ↑b_den ≠ 0
 
 -- Type classes section
-lemma rat_num_nonneg {num : ℤ} {den : ℕ} (hden_pos : 0 < den)
-    (h : (0 : ℚ) ≤ num / den) : 0  ≤ num := by
+lemma rat_num_nonneg{num : ℤ} {den : ℕ} (hden_pos : 0 < den)
+    (h : (0 ) ≤ num / den) : 0  ≤ num := by
   contrapose! h
   have hden_pos_to_rat : (0 : ℚ) < den := Nat.cast_pos.mpr hden_pos
   have hnum_neg_to_rat : num  < (0 : ℚ)  := Int.cast_lt.mpr h
   exact div_neg_of_neg_of_pos hnum_neg_to_rat hden_pos_to_rat
-lemma rat_add_nonneg_manual (a b : Rat) :
+
+lemma rat_add_nonneg_int (a b : Rat) :
     0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
   intro ha hb
   -- Destructure a and b
-  cases a with | div a_num a_den a_den_nz a_cop =>
+  cases a with | div a_num a_den a_den_nz a_cop => -- div is from Rat.div and not usable
   cases b with | div b_num b_den b_den_nz b_cop =>
-
-  -- Use definition of a + b
-  let num := a_num * b_den + b_num * a_den
-  let den := a_den * b_den
-
-  -- Our goal is: num / den ≥ 0
-  -- Since den > 0, this is equivalent to num ≥ 0
-
-  -- So it suffices to prove: num ≥ 0
-
-  -- From ha: 0 ≤ a_num / a_den
-  -- So a_num ≥ 0 since a_den > 0
 
   have a_den_pos : 0 < a_den := Nat.pos_of_ne_zero a_den_nz
   have b_den_pos : 0 < b_den := Nat.pos_of_ne_zero b_den_nz
 
-  -- From ha: a_num / a_den ≥ 0, since a_den > 0, this implies a_num ≥ 0
-  -- You can use a manual lemma for that (which you already wrote: `rat_num_nonneg`)
 
   have a_num_nonneg := rat_num_nonneg a_den_pos ha
   have b_num_nonneg := rat_num_nonneg b_den_pos hb
 
-  -- Now show: a_num * b_den + b_num * a_den ≥ 0
   have h1 : 0 ≤ a_num * b_den := Int.mul_nonneg a_num_nonneg (Int.natCast_nonneg _)
   have h2 : 0 ≤ b_num * a_den := Int.mul_nonneg b_num_nonneg (Int.natCast_nonneg _)
 
   have sum_nonneg : 0 ≤ a_num * b_den + b_num * a_den := Int.add_nonneg h1 h2
-
-  -- Since denominator is positive, this implies the rational is ≥ 0
-  -- Therefore, a + b ≥ 0
-  -- a + b = num / den, with den > 0 ⇒ ≥ 0 iff num ≥ 0
-
-  -- So conclude:
-  exact sum_nonneg
-
-
-  exact Int.add_nonneg
-    (Int.mul_nonneg ha_num (Int.ofNat_nonneg b_den))
-    (Int.mul_nonneg (Int.ofNat_nonneg a_den) hb_num)
+  sorry
 -- A semigroup has an associative binary operation
 class SemigroupD (α : Type*) where
   mul : α → α → α
@@ -400,6 +375,7 @@ def myRat : Type := Rat
 
 instance : Field myRat := inferInstanceAs (Field Rat)
 instance : PartialOrder myRat := inferInstanceAs (PartialOrder Rat)
+instance : Add myRat := inferInstanceAs (Add Rat)
 
 def my_add (a b : myRat) : myRat :=
   { num := a.num * b.den + b.num * a.den,
@@ -410,7 +386,8 @@ def my_add (a b : myRat) : myRat :=
 instance : Add myRat := ⟨my_add⟩
 
 lemma myRat_nonneg_iff (r : myRat) : 0 ≤ r ↔  0 ≤ r.num := by
-  simp_all only [Rat.num_nonneg]
+  rw [Rat.le_def]
+  simp [Rat.num_zero, Rat.den_zero]
 
 lemma myRat_add_nonneg (a b : myRat) :
     0 ≤ a → 0 ≤ b → 0 ≤  a + b := by
