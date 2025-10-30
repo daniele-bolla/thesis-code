@@ -1,6 +1,7 @@
 import Mathlib
 open Real Set Filter Topology
 
+-- Domain
 def pos_real := Set.Ioi (0 : ℝ)
 noncomputable def sine_curve := fun x ↦ (x, Real.sin (x⁻¹))
 def S : Set (ℝ × ℝ) := (sine_curve) '' pos_real
@@ -25,6 +26,7 @@ lemma T_sub_cls_S : T ⊆ closure S := by
           inv_pos.mpr (mul_pos (Nat.cast_pos.mpr hn) Real.pi_pos),
           by simp [f, sine_curve, inv_inv, Real.sin_nat_mul_pi]⟩
       exact mem_closure_of_tendsto hf hf'
+
 theorem T_is_conn : IsConnected T :=
   IsConnected.subset_closure (isConnected_Ioi.image sine_curve <|
     continuous_id.continuousOn.prodMk <|
@@ -32,11 +34,12 @@ theorem T_is_conn : IsConnected T :=
     ContinuousOn.inv₀ continuous_id.continuousOn
     (fun _ hx => ne_of_gt hx)) (by tauto_set) T_sub_cls_S
 
--- T is Not Path-connected
+-- T is not path-connected
 -- utility lemma
 lemma norm_ge_abs_snd {a b : ℝ} : ‖(a, b)‖ ≥ |b| := by simp
 -- define a positive sequence in S such that when composed with the sinCurve is always 1
 noncomputable def xs_pos_peak := fun (k : ℕ) => 2/((4 * k + 1) * Real.pi)
+
 lemma xs_pos_peak_tendsto_zero : Tendsto xs_pos_peak atTop (𝓝 0) := by
   refine Tendsto.comp (g := fun k : ℝ ↦ 2 / ((4 * k + 1) * Real.pi))
     ?_ tendsto_natCast_atTop_atTop
@@ -47,6 +50,7 @@ lemma xs_pos_peak_tendsto_zero : Tendsto xs_pos_peak atTop (𝓝 0) := by
 
 lemma xs_pos_peak_nonneg : ∀ k : ℕ, 0 ≤ xs_pos_peak k := fun k =>
   div_nonneg (by norm_num) (by positivity)
+
 lemma sin_xs_pos_peak_eq_one (k : ℕ) : Real.sin ((xs_pos_peak k)⁻¹) = 1 := by
   have : (xs_pos_peak k)⁻¹ = Real.pi / 2 + k * (2 * Real.pi) := by
     simp [xs_pos_peak]; field_simp; ring
@@ -195,5 +199,6 @@ theorem T_is_not_path_conn : ¬ (IsPathConnected T)  := by
         _ = dist (p t') (p t₀) := by rw [dist_eq_norm]
   linarith
 
+-- T is connected not path-connected
 theorem T_is_conn_not_pathconn : IsConnected T ∧ ¬IsPathConnected T :=
   ⟨T_is_conn,T_is_not_path_conn ⟩

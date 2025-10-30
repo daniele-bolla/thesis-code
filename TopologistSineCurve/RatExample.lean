@@ -11,7 +11,6 @@ structure myPreRat where
 
 namespace myPreRat
 
--- Basic operations on raw rationals
 instance : LE myPreRat where
   le r₁ r₂ := r₁.num * ↑r₂.den ≤ r₂.num * ↑r₁.den
 
@@ -41,10 +40,15 @@ lemma nonneg_iff (r : myPreRat) : zero ≤ r ↔ 0 ≤ r.num := by
 --   · change 0 * r.den ≤ r.num * 1; simp; exact h
 
 lemma add_nonneg (a b : myPreRat) : zero ≤ a → zero ≤ b → zero ≤ a + b := by
-  intro ha hb
+  -- intro ha hb
   -- cases a with | mk a_num a_den _ =>
   -- cases b with | mk b_num b_den _ =>
-  simp only [nonneg_iff] at ha hb ⊢
+  -- simp only [nonneg_iff] at ha hb ⊢
+  -- apply Int.add_nonneg
+  -- · exact Int.mul_nonneg ha (Int.natCast_nonneg b_den)
+  -- · exact Int.mul_nonneg hb (Int.natCast_nonneg a_den)
+  simp only [nonneg_iff]
+  intro ha hb
   apply Int.add_nonneg
   · exact Int.mul_nonneg ha (Int.natCast_nonneg b.den)
   · exact Int.mul_nonneg hb (Int.natCast_nonneg a.den)
@@ -54,16 +58,6 @@ theorem le_refl (a : myPreRat) : a ≤ a := by
   -- change a.num * ↑a.den ≤ a.num * ↑a.den
   exact Int.le_refl _
 
-/--
-Transitivity of ≤ on pre-rationals.
-If a ≤ b and b ≤ c, then a ≤ c.
-
-In fraction notation: if a/a.den ≤ b/b.den and b/b.den ≤ c/c.den,
-then a/a.den ≤ c/c.den.
-
-Key insight: We multiply everything by b.den (which is positive) to create
-a "bridge" between the two inequalities through their common middle term b.
--/
 theorem le_trans (a b c : myPreRat) : a ≤ b → b ≤ c → a ≤ c := by
   intro hab hbc
   -- hab : a ≤ b, which means: a.num * b.den ≤ b.num * a.den
@@ -74,8 +68,7 @@ theorem le_trans (a b c : myPreRat) : a ≤ b → b ≤ c → a ≤ c := by
   apply Int.le_of_mul_le_mul_right _ b.den_pos_int
   -- Now we need: (a.num * c.den) * b.den ≤ (c.num * a.den) * b.den
   calc (a.num * c.den) * b.den
-      -- Step 1: Rearrange to introduce a.num * b.den
-      -- Why? Because hab involves a.num * b.den
+      -- Step 1: Rearrange to introduce a.num * b.den for hab
       = (a.num * b.den) * c.den := by ring
       -- Step 2: Apply first inequality hab
       -- We know: a.num * b.den ≤ b.num * a.den
@@ -94,7 +87,6 @@ theorem le_trans (a b c : myPreRat) : a ≤ b → b ≤ c → a ≤ c := by
         -- Now we have c in the final position
       -- Step 5: Rearrange to match the form needed for cancellation
     _ = (c.num * a.den) * b.den := by ring
-
   -- Final: We proved (a.num * c.den) * b.den ≤ (c.num * a.den) * b.den
   -- Cancel b.den (which is positive) from both sides to get a ≤ c
 
@@ -123,9 +115,11 @@ instance myRel : Setoid myPreRat where
       grind
 
 -- ========================================
--- Section 3: Respect Proofs (Operations preserve equivalence)
+-- Section 3: Respect Proofs (Operations preserve equivalence) or Welle Definedness
 -- ========================================
-
+/--
+If a₁ ≈ a₂ and b₁ ≈ b₂, then (a₁ + b₁) ≈ (a₂ + b₂).
+-/
 theorem myRel_respects_le (a₁ b₁ a₂ b₂ : myPreRat) :
     a₁ ≈ a₂ → b₁ ≈ b₂ → (a₁ ≤ b₁) = (a₂ ≤ b₂) := by
   intro ha hb
@@ -183,32 +177,19 @@ private theorem le_respects_equiv_forward
     _ = b₂.num * b₁.den * a₁.den * a₂.den := by rw [← hb]
     _ = (b₂.num * a₂.den) * (a₁.den * b₁.den) := by ring
 
-theorem myRel_respects_le_ref (a₁ b₁ a₂ b₂ : myPreRat) :
+theorem myRel_respects_le_refactored (a₁ b₁ a₂ b₂ : myPreRat) :
     a₁ ≈ a₂ → b₁ ≈ b₂ → (a₁ ≤ b₁) = (a₂ ≤ b₂) := by
   intro ha hb
-  simp only [eq_iff_iff]
+  simp only [eq_iff_iff] -- or apply propext
   constructor
-  · -- Forward: a₁ ≤ b₁ → a₂ ≤ b₂
-    exact le_respects_equiv_forward a₁ b₁ a₂ b₂ ha hb
-  · -- Backward: a₂ ≤ b₂ → a₁ ≤ b₁
-    -- Note: equivalence is symmetric (a₁ ≈ a₂ implies a₂ ≈ a₁)
-    intro h
-    have ha_symm : a₂ ≈ a₁ := Eq.symm ha
-    have hb_symm : b₂ ≈ b₁ := Eq.symm hb
-    exact le_respects_equiv_forward a₂ b₂ a₁ b₁ ha_symm hb_symm h
+  · exact le_respects_equiv_forward a₁ b₁ a₂ b₂ ha hb
+  · exact fun h => le_respects_equiv_forward a₂ b₂ a₁ b₁ ha.symm hb.symm h
 
-/--
-Proof that addition respects the equivalence relation.
-If a₁ ≈ a₂ and b₁ ≈ b₂, then (a₁ + b₁) ≈ (a₂ + b₂).
-
-Strategy: Expand both sides of the equivalence using the definition of addition,
-then use ha and hb to transform the left side into the right side.
--/
 theorem myRel_respects_add (a₁ b₁ a₂ b₂ : myPreRat) :
     a₁ ≈ a₂ → b₁ ≈ b₂ → (a₁ + b₁) ≈ (a₂ + b₂) := by
   intro ha hb
-  -- ha : a₁.num * a₂.den = a₂.num * a₁.den  (a₁ and a₂ represent same rational)
-  -- hb : b₁.num * b₂.den = b₂.num * b₁.den  (b₁ and b₂ represent same rational)
+  -- ha : a₁.num * a₂.den = a₂.num * a₁.den
+  -- hb : b₁.num * b₂.den = b₂.num * b₁.den
   -- Goal: (a₁ + b₁) ≈ (a₂ + b₂)
   -- This means: (a₁ + b₁).num * (a₂ + b₂).den = (a₂ + b₂).num * (a₁ + b₁).den
   -- Recall addition definition:
@@ -284,3 +265,17 @@ instance : PartialOrder myRat where
     exact Quotient.sound (myPreRat.le_antisymm a b hab hba)
 
 end myRat
+
+-- https://www.uv.es/coslloen/Lean4/Leancap10.html
+
+-- https://www.ma.imperial.ac.uk/~buzzard/xena/formalising-mathematics-2024/Part_A/section06quotients/quotients.html
+
+-- https://teorth.github.io/analysis/sec42/
+
+-- https://lean-lang.org/doc/reference/latest/The-Type-System/Quotients/
+
+-- https://xenaproject.wordpress.com/2025/02/09/what-is-a-quotient/
+
+-- https://webhomes.maths.ed.ac.uk/~adona/files/honours_project.pdf
+
+-- https://arxiv.org/html/2310.06959v5
