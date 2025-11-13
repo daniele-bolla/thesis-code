@@ -10,22 +10,32 @@ def T : Set (ℝ × ℝ) := S ∪ Z
 
 -- T is connected
 lemma T_sub_cls_S : T ⊆ closure S := by
+
   intro x hx
-  cases hx with
-  | inl hxS => exact subset_closure hxS
-  | inr hxZ =>
-      rw [hxZ]
-      let f : ℕ → ℝ × ℝ := fun n => ((n * Real.pi)⁻¹, 0)
-      have hf : Tendsto f atTop (𝓝 (0, 0)) := by
-        refine .prodMk_nhds ?_ tendsto_const_nhds
-        exact tendsto_inv_atTop_zero.comp
-          (Filter.Tendsto.atTop_mul_const' Real.pi_pos tendsto_natCast_atTop_atTop)
-      have hf' : ∀ᶠ n in atTop, f n ∈ S := by
-        filter_upwards [eventually_gt_atTop 0] with n hn
-        exact ⟨(n * Real.pi)⁻¹,
-          inv_pos.mpr (mul_pos (Nat.cast_pos.mpr hn) Real.pi_pos),
-          by simp [f, sine_curve, inv_inv, Real.sin_nat_mul_pi]⟩
-      exact mem_closure_of_tendsto hf hf'
+  rw[mem_closure_iff_seq_limit]
+  let f : ℕ → ℝ × ℝ := fun n => (((↑(n + 1) * Real.pi)⁻¹), 0)
+  use f
+  constructor
+  · intro s; use ((↑(s + 1) * Real.pi)⁻¹)
+    constructor
+    · refine inv_pos.mpr (mul_pos (Nat.cast_pos.mpr (Nat.succ_pos s)) Real.pi_pos)
+    · sorry
+  · sorry
+
+  -- | inl hxS => exact subset_closure hxS
+  -- | inr hxZ =>
+  --     rw [hxZ]
+  --     let f : ℕ → ℝ × ℝ := fun n => ((n * Real.pi)⁻¹, 0)
+  --     have hf : Tendsto f atTop (𝓝 (0, 0)) := by
+  --       refine .prodMk_nhds ?_ tendsto_const_nhds
+  --       exact tendsto_inv_atTop_zero.comp
+  --         (Filter.Tendsto.atTop_mul_const' Real.pi_pos tendsto_natCast_atTop_atTop)
+  --     have hf' : ∀ᶠ n in atTop, f n ∈ S := by
+  --       filter_upwards [eventually_gt_atTop 0] with n hn
+  --       exact ⟨(n * Real.pi)⁻¹,
+  --         inv_pos.mpr (mul_pos (Nat.cast_pos.mpr hn) Real.pi_pos),
+  --         by simp [f, sine_curve, inv_inv, Real.sin_nat_mul_pi]⟩
+  --     exact mem_closure_of_tendsto hf hf'
 
 theorem T_is_conn : IsConnected T :=
   IsConnected.subset_closure (isConnected_Ioi.image sine_curve <|

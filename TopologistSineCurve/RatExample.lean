@@ -39,13 +39,6 @@ lemma nonneg_iff (r : myPreRat) : 0 ≤ r ↔ 0 ≤ r.num := by
   · change 0 * r.den ≤ r.num * 1; simp; exact h
 
 lemma add_nonneg (a b : myPreRat) : 0 ≤ a → 0 ≤ b → 0 ≤ a + b := by
-  -- intro ha hb
-  -- cases a with | mk a_num a_den _ =>
-  -- cases b with | mk b_num b_den _ =>
-  -- simp only [nonneg_iff] at ha hb ⊢
-  -- apply Int.add_nonneg
-  -- · exact Int.mul_nonneg ha (Int.natCast_nonneg b_den)
-  -- · exact Int.mul_nonneg hb (Int.natCast_nonneg a_den)
   simp only [nonneg_iff]
   intro ha hb
   apply Int.add_nonneg
@@ -186,17 +179,3 @@ instance : PartialOrder myRat where
     exact Quotient.sound (myPreRat.le_antisymm a b hab hba)
 
 end myRat
-
--- https://www.uv.es/coslloen/Lean4/Leancap10.html
-
--- https://www.ma.imperial.ac.uk/~buzzard/xena/formalising-mathematics-2024/Part_A/section06quotients/quotients.html
-
--- https://teorth.github.io/analysis/sec42/
-
--- https://lean-lang.org/doc/reference/latest/The-Type-System/Quotients/
-
--- https://xenaproject.wordpress.com/2025/02/09/what-is-a-quotient/
-
--- https://webhomes.maths.ed.ac.uk/~adona/files/honours_project.pdf
-
--- https://arxiv.org/html/2310.06959v5
