@@ -1,21 +1,13 @@
 import Mathlib
-example (a b : Prop) (ha : a) (hb : b) : (a ∧ b) := And.intro ha hb
 
-theorem and_associative (a b c : Prop) : (a ∧ b) ∧ c → a ∧ (b ∧ c) :=
-  fun h : (a ∧ b) ∧ c =>
-    -- First, from the assumption (a ∧ b) ∧ c, we can derive a:
-    have hab : a ∧ b := h.left -- extracts (derive) a proof of (a ∧ b) from the assumption
-    have ha : a := hab.left -- extracts a from (a ∧ b)
-    -- Second, we can derive b ∧ c (here we only extract b and c and combine them in the next step)
-    have hc : c := h.right
-    have hb : b := hab.right
-    -- Finally, combining these derivations we obtain A ∧ (B ∧ C)
-    show a ∧ (b ∧ c) from ⟨ha, ⟨hb, hc⟩⟩
-
--- def Transitive {α : Type} (R : α → α → Prop) : Prop :=
---   ∀ x y z, R x y → R y z → R x z
-theorem le_trans_proof : Transitive (· ≤ · : Nat → Nat → Prop) :=
-  fun x y z h1 h2 => Nat.le_trans h1 h2
+variable (a b c : Rat)
+lemma rat_le_trans (hab : a ≤ b) (hbc : b ≤ c) : a ≤ c := by
+  rw [Rat.le_iff_sub_nonneg] at hab hbc
+  have := Rat.add_nonneg hab hbc
+  simp_rw [sub_eq_add_neg, add_left_comm (b + -a) c (-b), add_comm (b +
+  -a) (-b), add_left_comm (-b) b (-a), add_comm (-b) (-a),
+  add_neg_cancel_comm_assoc, ← sub_eq_add_neg] at this
+  rwa [Rat.le_iff_sub_nonneg]
 
 theorem rational_le_trans : Transitive (· ≤ · : Rat → Rat → Prop) := by
   intro a b c hab hbc
@@ -30,33 +22,85 @@ def third : Rat := Rat.mk' 1 3
 #check half -- outputs : Rat
 #check half + third -- outputs : Rat
 
-variable (a b c : Rat)
-
--- A semigroup has an associative binary operation
-class SemigroupD (α : Type*) where
+-- CHAPTER 3 Type Classes and Algebraic Hierarchy
+structure Semigroup' (α : Type*) where
   mul : α → α → α
   mul_assoc : ∀ a b c : α, mul (mul a b) c = mul a (mul b c)
--- A monoid extends semigroup with an identity element
 
-class MonoidD (α : Type*) extends Semigroup α where
-  one : α
-  one_mul : ∀ a : α, mul one a = a
-  mul_one : ∀ a : α, mul a one = a
--- A group extends monoid with inverses
-class GroupD (α : Type*) extends Monoid α where
-  inv : α → α
-  mul_left_inv : ∀ a : α, mul (inv a) a = one
+-- Simple function that works on any semigroup
+def double {α : Type*} (s : Semigroup' α) (x : α) : α :=
+  s.mul x x
 
-instance RatAddGroup : GroupD Rat where
+def Semigroup'_Int : Semigroup' ℤ where
   mul := (· + ·)
-  mul_assoc := by intros; apply add_assoc
+  mul_assoc := Int.add_assoc
+
+def Semigroup'_Rat : Semigroup' ℚ where
+  mul := (· + ·)
+  mul_assoc := Rat.add_assoc
+
+#eval double Semigroup'_Int (-2)   -- -4
+#eval double Semigroup'_Rat (1/2)   -- 1/1
+
+class Semigroup'' (α : Type*) where
+  mul : α → α → α
+  mul_assoc : ∀ a b c : α, mul (mul a b) c = mul a (mul b c)
+
+instance : Semigroup'' ℤ where
+  mul := (· + ·)
+  mul_assoc := Int.add_assoc
+
+instance : Semigroup'' ℚ where
+  mul := (· + ·)
+  mul_assoc := Rat.add_assoc
+
+-- Simple function with automatic instance
+def double' {α : Type*} [Semigroup'' α] (x : α) : α :=
+  Semigroup''.mul x x
+
+#eval double' (-2 : ℤ)     -- -4
+#eval double' (1/2 : ℚ)    -- 1
+
+class Group'' (α : Type*) extends Semigroup'' α where
+  one : α
+  left_id : ∀ a : α, mul one a = a
+  right_id : ∀ a : α, mul a one = a
+  inv : α → α
+  left_inv : ∀ a : α, mul (inv a) a = one
+  right_inv : ∀ a : α, mul a (inv a) = one
+
+instance : Group'' ℤ where
+  mul := (· + ·)
+  mul_assoc := Int.add_assoc
   one := 0
-  one_mul := by intros; apply zero_add
-  mul_one := by intros; apply add_zero
+  left_id := Int.zero_add
+  right_id := Int.add_zero
   inv := (· * -1)
-  mul_left_inv := by intros; ring
+  left_inv := by intro a; ring
+  right_inv := by intro a; ring
 
+instance : Group'' ℚ where
+  mul := (· + ·)
+  mul_assoc := Rat.add_assoc
+  one := 0
+  left_id := Rat.zero_add
+  right_id := Rat.add_zero
+  inv := fun x => -x
+  left_inv := by intro a; ring
+  right_inv := by intro a; ring
 
+theorem mul_cancel₀ {α : Type*} [Group'' α]  (a b c : α)
+    (h : Semigroup''.mul a b = Semigroup''.mul a c) : b = c := by
+    calc
+      b = Semigroup''.mul (Group''.one) b := by rw [Group''.left_id]
+      _ = Semigroup''.mul (Group''.inv a) (Semigroup''.mul a b) := by
+        rw [← Semigroup''.mul_assoc, Group''.left_inv]
+      _ = Semigroup''.mul (Group''.inv a) (Semigroup''.mul a c) := by rw [h]
+      _ = Semigroup''.mul (Group''.one) c := by
+        rw [← Semigroup''.mul_assoc, Group''.left_inv]
+      _ = c := by rw [Group''.left_id]
+
+-- CHAPTER 4
 open Real Set Filter Topology
 def pos_real := Ioi (0 : ℝ)
 noncomputable def sine_curve := fun x ↦ (x, sin (x⁻¹))
